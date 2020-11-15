@@ -976,5 +976,267 @@ import React, { useState } from 'react';
 
 ---
 
+**Redux**
 
+로그인 사용자 정보 또는 로그인 여부 등 **여러 컴포넌트들에서 공통적으로 쓰이는 데이터**들이 있는데, 지금까지는 컴포넌트가 분리되어있는 데로 데이터들이 따로 흩어져있어 부모 컴포넌트로 부터 자식에게로 전달전달하여 사용해야만 했다.
+
+매번 수동적으로 부모에서 자식으로 데이터를 내려 보내주는 과정은 매우 귀찮은 과정이기 때문에 이러한 수고를 확 덜어주는 **Redux**, **Mobx**, **Context API **등이 있다. 
+
+규모가 어느정도 되는 서비스라면 전역 상태를 관리할 중앙 저장소는 필수이다. 앱이 별로 크지 않다면, `Context API`를 사용하는 것도 괜찮다.
+
+앱이 크다면 보통은 `Redux`와 `Mobx`를 고르게 되는데, mobx는 react 생태계를 이해하고 자유자재로 잘 사용할줄 알면 mobx를 선택하는 것이 좋은데, 이유는 코드량이 매우 적지만 에러 트래킹에 있어 어려움이 있기 때문이다. 반면,  초보에게 redux가 좋은데, 이유는 에러 추적이 잘 되어 코딩에 도움을 준다(안정성이 높다). 하지만 코드량이 매우 많아 생산성에 조금 단점이 있다. 
+
+또 고려해야 할 사항이 있다. 일반적으로 앱은 전역 상태 관리 기술과 비동기 정보 요청을 동시에 필요로 한다. 여기서 비동기 요청은  `데이터 요청`, `데이터 반환 성공`, `데이터 반환 실패`로 처리해주는 과정을 갖는데, 만약 Context API를 사용하면 처리하는 코드를 직접 작성해주어야 하는 어려움이 있다. 또 이렇게 데이터를 요청하여 처리하는 코드를 작성하게 되면 보통 컴포넌트 단에 `useEffect`를 이용하여 작성하게 되는데, 컴포넌트는 최대한 화면 구성과 관련한 코드로 작성되는 것이 권장된다.
+
+![img](https://media.vlpt.us/images/jakeseo_me/post/7e7a9b07-b928-41fb-95c5-ce35f5443d22/Screen%20Shot%202020-11-11%20at%202.27.18%20AM.png) redux와 mobx의 다운로드 비교 지표이다.
+
+next에 redux를 붙일 때 상당히 복잡한 과정을 거쳐야하는데, 그것을 간편하게 해주는 라이브러리가 존재한다. 바로 `next redux wrapper`이다. 
+
+### next-redux-wrapper???
+
+정적 사이트 생성기나 서버 사이드 렌더링이 포함된다면, 리덕스가 연결된 컴포넌트들을 렌더링하기 위해 서버에 또 다른 스토어 인스턴스가 필요하게 되면서 많은 것들이 복잡해진다.
+
+게다가, 페이지의 getInitialProps 중에도 리덕스 스토어에 접근이 간혹 필요할 것이다.
+
+next-redux-wrapper는 이럴 때 편하다: 자동으로 스토어 인스턴스들을 만들어주며 모든 스토어 인스턴스들이 같은 상태인 것을 보증한다.
+
+또, 개개의 페이지 수준에서 getStaticProps 또는 getServerSideProps와 함께 App.getInitialProps 같은 것을 사용하는 복잡한 일을 제대로 처리할 수 있게 해준다.
+
+스토어를 사용하기 위해 어떤 Next.js 라이프사이클 메소드를 사용하길 원하던 간에 라이브러리는 균일한 인터페이스를 제공한다.
+
+시작
+
+- ```
+  npm i redux
+  npm i react-redux
+  npm i next-redux-wrapper
+  ```
+
+- store/configureStore.js 
+
+  store를 설정하는 configure js 파일이다.
+
+  ```javascript
+  import {createWrapper} from 'next-redux-wrapper';
+  
+  const configureStore = () => {
+  
+  };
+  
+  // 두 번째 파라미터는 option 객체인데, 디버그할 때 '개발'이라면 redux에 관해 좀 더 설명이 자세히.
+  const wrapper = createWrapper(configureStore, {
+      debug: process.env.NODE_ENV === 'development',
+  });
+  
+  export default wrapper;
+  ```
+
+- 기존 redux를 사용했을 때는 <Provider store={store}> ... </Provider> 로 page를 감싸줬었는데, next에서는 알아서 감싸준다. 
+
+  pages/_app.js
+
+  ```javascript
+  import React from 'react';
+  import PropTypes from 'prop-types';
+  import 'antd/dist/antd.css';
+  import Head from 'next/head';
+  // 변경된 곳
+  import wrapper from '../store/configureStore';
+  
+  const NodeBird = ({ Component }) => {
+      return (
+          <>//그냥 redux를 쓸 때는 Provider로 감쌌었는데 그럴 필요 X
+          <Head>
+              <meta charSet="utf-8" />
+              <title>NodeBird</title>
+          </Head>
+          <Component />
+          </>
+      )
+  };
+  
+  NodeBird.propTypes = {
+      Component: PropTypes.elementType.isRequired,
+  }
+  
+  // 변경된 곳: Higher-Order Component를 구성하듯 wrapper.withRedux를 이용해 감싸준다.
+  export default wrapper.withRedux(NodeBird);
+  ```
+
+---
+
+**Redux의 원리와 불변성?**
+
+우선 redux는 reduce에서 이름을 따온 것이다. 중앙 데이터 저장소에 있는 데이터를 읽기를 제외한 `추가/수정/삭제` 할 수 있게 각 작업에 맞는 action을 각각 생성한다. 그 다음 dispatch로 액션을 저장소에 적용시켜 상태를 바꾼다. 또 알아야할 용어로 reducer가 있는데,  dispatch 한다고해서 next가 알아서 마법처럼 자동으로 상태를 바꿔주는 것이 아니라 그전에 reducer라는 것을 만들어 그 안에 정해진 규칙에 의해 저장돼있던 데이터의 상태가 바뀌게 되는 것이다. 데이터 저장소에 필요한 작업이 있을 때마다 액션과 규칙을 적어줘야 하기 때문에 코드량이 많아진다. 그렇지만 좋은 이유로 액션 하나하나가 redux에 기록이 되기 때문에 action들만 쫙 놓고 보면 데이터를 어떻게 바꿔왔는지 내역들이 다 추적이된다. 따라서 버그 잡을 때 매우 편한다. 
+
+![K-001](https://user-images.githubusercontent.com/52457180/99179679-4ce12080-2763-11eb-93df-be3208682931.png)
+
+switch 문에서 return 할 때 { }로 감싸서 하는 이유는 **불변성**이라는 자바스크립트의 성질과 관련이 있다. `{} === {} 는 false를 리턴`한다. 하지만 `const a = {}; const b = a; a === b 는 true를 리턴`하는데 차이는 새로 만들어진 객체의 비교, 같은 것을 가리키는 참조의 비교이다.  즉 reducer에서 return 될 때 {}로 새 객체를 리턴함으로써 화면에서 바꾸고 싶은 것만 바꾼다. 또 변경내역들이 history에 남아 추적이 가능해진다. 
+
+> ```js
+> 중요(★)
+> 
+> - 자바스크립트에서는 위와 같은 특성이 있는데, 객체를 새로 만들 때 새로운 주소를 부여한다.
+> - 상태관리에서 화면이 업데이트 되는 기준은 기존 객체가 다른 객체로 업데이트 되었을 때이다. 
+> - 다른 객체를 만들기 위해 Reducer에서 기존 객체를 수정하지 않고 매번 새로운 객체를 반환한다.
+> - 또한 Redux의 다른 목적 중에 History 관리의 측면이 있는데, 주소가 다른 각각의 객체를 따로 기억하면 History를 알 수 있다.
+> - 기존 객체를 수정해서는 History를 보관하기 어렵다. 이러한 특성을 이용하기 위해서 또 불변성을 지킨다.
+> - ...state를 이용하는 이유는 안바뀌는 것들에 대해서는 참조관계를 유지하여 메모리를 아끼기 위해서이다.
+> - 오브젝트 내부의 오브젝트 등이 있을 때는 참조관계를 그대로 유지하기 때문에 효율적이다.
+> 
+> ```
+
+액션 발생시킨 것을 기록으로 확인하고 싶으면 미들웨어를 만들어야한다. 브라우저 개발자 도구와 연동하기 위해서 npm i redux-devtools-extension 을 설치해주자. `Redux Devtool`은 `타임머신`이라는 기능을 제공하는데 어떤 액션이 행해지기 전과 후로 마음대로 옮겨다닐 수 있다.
+
+**`Redux`의 `개발모드`에서는 History를 전부 저장하지만, `배포모드`에서는 History를 계속 정리한다. 그래서 메모리를 훨씬 적게 사용한다.**
+
+-----
+
+리덕스 실제 구현하기
+
+1. reducers 디렉터리와 index.js 만들기
+
+   reducers/index.js
+
+   ```javascript
+   const rootReducer = () => {};
+   
+   export default rootReducer;
+   ```
+
+   다른 컴포넌트를 구성하는 것과 같은 기본 골격을 가지며, 내용은 switch를 이용하여 action의 타입별로 상태를 실질적으로 변화시켜주는 코드로 구성될 것이다.
+
+   ```javascript
+   const rootReducer = (state: object, action: { type: string; data: any }) => {
+       switch (action:type) {
+           case 'ACTION의 이름':
+               return {
+               	...state,  
+               };
+               
+               break;
+       }
+   }
+   export default rootReducer;
+   ```
+
+   rootReducer에 state와 action이 들어오며, action은 state와 data로 이루어져 있다.
+
+2. configureStore에 reducer 추가하기
+
+   store/configureStore.js
+
+   ```javascript
+   import { createWrapper } from 'next-redux-wrapper';
+   import { createStore} from 'react-redux';
+   import reducer from '../reducers';
+   
+   const configureStore = () => {
+       // 변경된 곳: 우리가 만든 reducer를 createStore로 감싸 반환.
+       // store는 state와 reducer를 포함하는 것
+       const store = createStore(reducer);
+       return store;
+   };
+   // 두 번째 파라미터는 option 객체인데, 디버그할 때 '개발'이라면 redux에 관해 좀 더 설명이 자세히.
+   const wrapper = createWrapper(configureStore, {
+       debug: process.env.NODE_ENV === 'development',
+   });
+   
+   export default wrapper;
+   ```
+
+3. rootReducer에 initialState 넣어주기
+
+   ```javascript
+   const initialState = {
+       name: 'jch',
+       age: 28,
+       password: 'babo',
+   }
+   
+   // 이전 상태와 action을 받아 다음 상태를 만들어 리턴.
+   const rootReducer = (
+       state: { name: string, age: number; password: string; } = initialState, 
+       action: { type: string; data: any }
+   ) => {
+       switch (action:type) {
+           case 'ACTION의 이름':
+               return {
+               	...state,  
+               };
+               
+               break;
+           // default 케이스는 무조건 있어야 오류를 피할 수 있다. 
+           default:
+               return state;
+       }
+   }
+   export default rootReducer;
+   ```
+
+4. Action 구상하기
+
+   사용자의 닉네임을 예를들어 jjj로 변경하는 action을 단순하게 만든다면, 
+
+   ```javascript
+   // 기본 액션 예제
+   const actionExample = {
+       type: 'CHANGE_NINKNAME',
+       data: 'jjj',
+   };
+   ```
+
+   위와 같을 것이다. 하지만 사용자 닉네임을 모두 jjj로 바꾸고 싶진 않을 것이다. 따라서 유연한 액션을 만들어야 한다. 그걸 위해 `Action creator`라는 것이 있는데, 거창한 것은 아니고 사용자에게 데이터만 받아서 새로운 Action을 return 해주는 것이다. 
+
+   ```javascript
+   const actionCreatorExample = (data) => {
+       return {
+           type: 'CHANGE_NICKNAME',
+           data,
+       };
+   };
+   
+   // 사용
+   actionCreatorExample('jjj');
+   actionCreatorExample('정창훈');
+   ```
+
+5. store에서 디스패치하기
+
+   ```javascript
+   store.dispatch(actionCreator(data));
+   ```
+
+   위와 같이, store의 dispatch 함수에 actionCreator를 넣게되면, 원하는 데이터를 이용해 원하는 action을 유연하게 dispatch 하여 전역 상태를 관리할 수 있다.
+
+6. Redux 상태를 Component에서 불러오기
+
+   가장 기본적으로 redux에 로그인 상태를 보관하여 이용하고 싶을 때 이용하면 좋을 것이다. 보관하는 방법을 배웠으니 보관된 것을 꺼내어 사용할 때는 어떻게 할까?
+
+   ```javascript
+   const isLoggedIn = useSelector((state) => state.user.isLoggedIn);
+   ```
+
+   바로 `useSelector`를 활용하여 값을 불러올 수 있다. `state`에서 `.`을 이용하여 원하는 값을 부르고, 컴포넌트 내부 변수에 저장해주면 된다.
+
+7. dispatch를 이용하여 redux 값 바꿔보기
+
+   이제 컴포넌트 내부 변수를 set하지말고 dispatch를 써서 redux 전역 상태를 바꾸는 방식으로 변경해보자.
+
+   ```javascript
+   //dispatch 함수 생성
+   const dispatch = useDispatch();
+   
+   const onSubmitForm = useCallback((e) => {
+       dispatch(loginAction({ id, password }));
+   },
+   	[id, password],                              
+   );
+   ```
+
+   위와 같이 `react-redux`에 있는 `useDispatch`를 이용하여 `dispatch` 함수를 하나 만들고, 그 안에 `Action`을 넣는 방식으로 하면 된다.
+
+----
+
+**미들웨어와 리덕스 데브툴즈**
 
