@@ -8,7 +8,7 @@
 >
 > **목표**
 >
-> - 자바스크립트(프론트: React(Next), 백: Node.js)를 이용한 SNS 풀스택 프로그래밍과 AWS 배포 방법까지 함께 알려주는 인터넷 강의를 보고 따라해보며 내것으로 만들 것이다.
+> - 자바스크립트(프론트: React(Next), 백: Node.js)를 이용한 SNS 풀스택 프로그래밍과 AWS 배포 방법까지 함께 알려주는 인터넷 강의를 보고 따라해본다.
 
 > **학습 기술**
 >
@@ -22,8 +22,6 @@
 > - 먼저 front 영역부터 진행할 것인데, 백엔드 쪽 데이터 준비가 덜 된 상태라 가정하며, 더미 데이터를 만들어 진행한다.
 
 ---
-
-아래는 강의를 듣고 직접 정리한 내용입니다. 강의없이 봐도 이해하기 쉽도록 순서대로 자세히 적었습니다. 
 
 ## **Front-End**
 
@@ -441,8 +439,15 @@ import React, { useState } from 'react';
   import Link from 'next/link';
   
   const LoginForm = () => {
-      const [id, setId] = useState('');
-      const [password, setPassword] = useState('');
+      const [id, setId] = useState('')
+      const onChangeId = useCallback((e) => {
+          setId(e.target.value);
+      }, []);
+      
+      const [password, setPassword] = useState('')
+      const onChangePassword = useCallback((e) => {
+          setPassword(e.target.value);
+      }, []);
   
       // 컴포넌트에 Props로 넘겨주는 함수는 useCallback을 써야한다. 그래야 최적화가 된다.
       const onChangeId = useCallback((e) => {
@@ -519,13 +524,11 @@ import React, { useState } from 'react';
       vertical-align: middle;
 `;
   
-  ```
-
-const AppLayout = ({ children }) => {
+  const AppLayout = ({ children }) => {
       const [isLoggedIn, setIsLoggedIn] = useState(false); // 가짜 데이터
   	return (            
           <div>
-              <Menu mode="horizontal">
+          <Menu mode="horizontal">
                   <Menu.Item>
                       <Link href="/"><a>홈</a></Link>
                   </Menu.Item>
@@ -554,14 +557,12 @@ const AppLayout = ({ children }) => {
           </div>
       )
   };
-
   AppLayout.propTypes = {
       children: PropTypes.node.isRequired,
   };
-
   export default AppLayout
-  ```
   
+  ```
   components/LoginForm.js
   
   ```javascript
@@ -580,8 +581,15 @@ const AppLayout = ({ children }) => {
   `;
   
   const LoginForm = ({ setIsLoggedIn }) => {
-      const [id, setId] = useState('');
-      const [password, setPassword] = useState('');
+      const [id, setId] = useState('')
+      const onChangeId = useCallback((e) => {
+          setId(e.target.value);
+      }, []);
+      
+      const [password, setPassword] = useState('')
+      const onChangePassword = useCallback((e) => {
+          setPassword(e.target.value);
+      }, []);
   
       // useCallback은 함수를, useMemo는 값을 캐싱.
       // 컴포넌트에 Props로 넘겨주는 함수는 useCallback을 써야한다. 그래야 최적화가 된다.
@@ -631,16 +639,16 @@ const AppLayout = ({ children }) => {
               <ButtonWrapper>
                   <Button type="primary" htmlType="submit" loading={false}>로그인</Button>
                   <Link href="/signup"><a><Button>회원가입</Button></a></Link>
-              </ButtonWrapper>
+            </ButtonWrapper>
           </FormWrapper>
-      );
+    );
   };
   
-  export default LoginForm;
+  export default LoginForm; 
   ```
-
+  
   components/UserProfile.js
-
+  
   ```javascript
   import React, {useCallback} from 'react';
   import { Button, Card, Avatar } from 'antd';
@@ -734,9 +742,239 @@ const AppLayout = ({ children }) => {
 
 ---
 
+프로필 페이지 만들기
 
+- 컴포넌트 쪼개기
 
+  화면을 설계할 때 필요할 거 같은 컴포넌트를 미리 구축시켜놓자(아직 구현되어있지 않지만). 필요하면 더미데이터도 간단하게 만들어서 테스트.  예전에는 컴포넌트를 쪼개는 것이 마냥 좋지는 않았다. 개발자 입장에서는 당연히 쪼개면 관리하기 쉽고 보기에도 좋다. 하지만 부모에서 자식으로 데이터를 props로 넘겨줘야 하는 부담이 있었다. 부모에서 먼 자식으로 데이터가 갈 때 부담이 컸다. 이제는 hooks를 통해 해결이 되어 부담이 크게 줄었다. 적극적으로 쪼개는 것이 권장된다.
 
+  
+
+  pages/profile.js
+
+  ```javascript
+  import React from 'react';
+  
+  import NicknameEditForm from '../components/NicknameEditForm';
+  import AppLayout from '../components/AppLayout';
+  import FollowList from '../components/FollowList';
+  
+  const Profile = () => {
+    const followerList = [{ nickname: '제로초' }, { nickname: '바보' }, { nickname: '노드버드오피셜' }];
+    const followingList = [{ nickname: '제로초' }, { nickname: '바보' }, { nickname: '노드버드오피셜' }];
+  
+    return (
+      <AppLayout>
+        <NicknameEditForm />
+        <FollowList
+          header="팔로잉 목록"
+          data={followingList}
+        />
+        <FollowList
+          header="팔로워 목록"
+          data={followerList}
+        />
+      </AppLayout>
+    );
+  };
+  
+  export default Profile;
+  ```
+
+  components/NicknameEditForm.js
+
+  ```javascript
+  import { Form, Input } from 'antd';
+  import React from 'react';
+  
+  const NicknameEditForm = () => {
+    return (
+      <Form style={{ marginBottom: '20px', border: '1px solid #d9d9d9', padding: '20px' }}>
+        <Input.Search addonBefore="닉네임" enterButton="수정" />
+      </Form>
+    );
+  };
+  
+  export default NicknameEditForm;
+  ```
+
+  components/FollowList.js
+
+  ```javascript
+  import { Button, Card, List } from 'antd';
+  import { StopOutlined } from '@ant-design/icons'; // 아이콘은 따로 관리된다. 최적화 관련. 용량이 크기때문에. 
+  import React from 'react';
+  import PropTypes from 'prop-types';
+  
+  const FollowList = ({ header, data }) => (
+    <List
+      style={{ marginBottom: '20px' }}
+      grid={{ gutter: 4, xs: 2, md: 3 }}
+      size="small"
+      header={<div>{header}</div>}
+      loadMore={<div style={{ textAlign: 'center', margin: '10px 0'}}><Button>더 보기</Button></div>}
+      bordered
+      dataSource={data}
+      renderItem={(item) => (
+        <List.Item style={{ marginTop: '20px' }}>
+          <Card actions={[<StopOutlined key="stop" />]}>
+            <Card.Meta description={item.nickname} />
+          </Card>
+        </List.Item>
+      )}
+    />
+  );
+  
+  FollowList.propTypes = {
+    header: PropTypes.string.isRequired,
+    data: PropTypes.array.isRequired,
+  };
+  
+  export default FollowList;
+  ```
+
+----
+
+회원가입 페이지 만들기 (커스텀 훅)
+
+- 커스텀 훅을 만드는 이유?
+
+  반복되는 코드를 간략하게 줄일 수 있다. 그냥 훅을 쓸 때에는 컴포넌트 내 return () 위쪽에 선언해서 사용할 수 있었는데, 커스텀 훅은 밖에 따로 폴더를 생성하여 그 안에서 관리하며 사용하고 싶은 곳에서 불러와 사용할 수 있다. 
+
+  
+
+  hooks/useInput.js
+
+  ```javascript
+  import { useState, useCallback } from 'react';
+  
+  export default (initValue = null) => {
+    const [value, setter] = useState(initValue);
+    const handler = useCallback((e) => {
+      setter(e.target.value);
+    }, []);
+    return [value, handler];
+  };
+  ```
+
+  
+
+  로그인 폼에 적용시키기
+
+  ```javascript
+  import useInput from '../hooks/useInput';
+  ...
+  const LoginForm = () => {
+      // 변경된 곳
+      const [id, setId] = useState('');
+      const [password, setPassword] = useState('');
+      ...
+      return (
+          ...
+      );
+  };
+  export default LoginForm;
+  ```
+
+  
+
+  회원가입 폼에 적용시키기
+
+  ```javascript
+  import React, { useState, useCallback } from 'react';
+  import { Form, Input, Checkbox, Button } from 'antd';
+  import PropTypes from 'prop-types';
+  
+  import AppLayout from '../components/AppLayout';
+  import useInput from '../hooks/useInput';
+  
+  const TextInput = ({ value }) => {
+    return (
+      <div>{value}</div>
+    )
+  };
+  
+  TextInput.propTypes = {
+    value: PropTypes.string,
+  };
+  
+  const Signup = () => {
+    const [passwordCheck, setPasswordCheck] = useState('');
+    const [term, setTerm] = useState(false);
+    const [passwordError, setPasswordError] = useState(false);
+    const [termError, setTermError] = useState(false);
+  
+    const [id, onChangeId] = useInput('');
+    const [nickname, onChangeNickname] = useInput('');
+    const [password, onChangePassword] = useInput('');
+  
+    const onSubmit = useCallback(() => {
+      if (password !== passwordCheck) {
+        return setPasswordError(true);
+      }
+      if (!term) {
+        return setTermError(true);
+      }
+      console.log(id, nickname, password);
+    }, [password, passwordCheck, term]);
+  
+    const onChangePasswordCheck = useCallback((e) => {
+      setPasswordError(e.target.value !== password);
+      setPasswordCheck(e.target.value);
+    }, [password]);
+  
+    const onChangeTerm = useCallback((e) => {
+      setTermError(false);
+      setTerm(e.target.checked);
+    }, []);
+  
+    return (
+      <AppLayout>
+        <Form onFinish={onSubmit} style={{ padding: 10 }}>
+          <TextInput value="135135" />
+          <div>
+            <label htmlFor="user-id">아이디</label>
+            <br />
+            <Input name="user-id" value={id} required onChange={onChangeId} />
+          </div>
+          <div>
+            <label htmlFor="user-nickname">닉네임</label>
+            <br />
+            <Input name="user-nickname" value={nickname} required onChange={onChangeNickname} />
+          </div>
+          <div>
+            <label htmlFor="user-password">비밀번호</label>
+            <br />
+            <Input name="user-password" type="password" value={password} required onChange={onChangePassword} />
+          </div>
+          <div>
+            <label htmlFor="user-password-check">비밀번호체크</label>
+            <br />
+            <Input
+              name="user-password-check"
+              type="password"
+              value={passwordCheck}
+              required
+              onChange={onChangePasswordCheck}
+            />
+            {passwordError && <div style={{ color: 'red' }}>비밀번호가 일치하지 않습니다.</div>}
+          </div>
+          <div>
+            <Checkbox name="user-term" checked={term} onChange={onChangeTerm}>제로초 말을 잘 들을 것을 동의합니다.</Checkbox>
+            {termError && <div style={{ color: 'red' }}>약관에 동의하셔야 합니다.</div>}
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <Button type="primary" htmlType="submit">가입하기</Button>
+          </div>
+        </Form>
+      </AppLayout>
+    );
+  };
+  
+  export default Signup;
+  ```
+
+---
 
 
 

@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button, Form, Input } from 'antd';
 import Link from 'next/link';
 import styled from 'styled-components';
+import PropTypes from 'prop-types';
 
 const ButtonWrapper = styled.div`
     // 이 영역은 css 적듯이...
@@ -68,5 +69,9 @@ const LoginForm = ({ setIsLoggedIn }) => {
         </FormWrapper>
     );
 };
+
+LoginForm.propTypes = {
+    setIsLoggedIn: PropTypes.func.isRequired
+}
 
 export default LoginForm;
